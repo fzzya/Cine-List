@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "763768443614",
+    "project_id": "cinelist-bf039",
+    "storage_bucket": "cinelist-bf039.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:763768443614:android:97a0ce9f91890d9230a84f",
+        "android_client_info": {
+          "package_name": "com.example.cine_list"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTTG9KawS-keJ_AOiIv1jcxKsQdOTNYdc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
