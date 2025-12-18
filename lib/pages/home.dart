@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-// import '../widgets/movie_list.dart';
+import '../models/movie.dart';
+import '../services.dart/movie_services.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -11,6 +12,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final MovieService _movieService = MovieService();
 
   @override
   void initState() {
@@ -24,8 +26,42 @@ class _HomePageState extends State<HomePage>
     super.dispose();
   }
 
-  Widget buildEvenetList(BuildContext context, String category) {
-    return Center(child: Text(category));
+  Widget buildMovieList() {
+    return FutureBuilder<List<Movie>>(
+      future: _movieService.getPopularMovies(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final movies = snapshot.data!;
+        return ListView.builder(
+          itemCount: movies.length,
+          itemBuilder: (context, index) {
+            final movie = movies[index];
+            return ListTile(
+              leading: Image.network(
+                'https://image.tmdb.org/t/p/w200${movie.posterPath}',
+              ),
+              title: Text(movie.title),
+              subtitle: Text(
+                movie.overview,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget buildPlaceholder(String title) {
+    return Center(child: Text(title, style: const TextStyle(fontSize: 18)));
   }
 
   @override
@@ -34,12 +70,13 @@ class _HomePageState extends State<HomePage>
       appBar: AppBar(
         title: const Text(
           'CineList',
+          textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFFE50914),
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
+          tabs: const [
             Tab(text: "Movies"),
             Tab(text: "TV Shows"),
             Tab(text: "Favorites"),
@@ -49,17 +86,15 @@ class _HomePageState extends State<HomePage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          buildEvenetList(context, "Movies"),
-          buildEvenetList(context, "TV Shows"),
-          buildEvenetList(context, "Favorites"),
+          buildMovieList(),
+          buildPlaceholder("TV Shows"), // dummy
+          buildPlaceholder("Favorites"),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Color(0xFFE50914),
+        backgroundColor: const Color(0xFFE50914),
         child: const Icon(Icons.add),
-        onPressed: () {
-          // Implement search functionality here
-        },
+        onPressed: () {},
       ),
     );
   }
