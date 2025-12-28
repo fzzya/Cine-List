@@ -78,7 +78,7 @@ class _HomePageState extends State<HomePage>
           controller: _tabController,
           tabs: const [
             Tab(text: "Movies"),
-            Tab(text: "TV Shows"),
+            Tab(text: "Watchlist"),
             Tab(text: "Favorites"),
           ],
         ),
@@ -87,14 +87,9 @@ class _HomePageState extends State<HomePage>
         controller: _tabController,
         children: [
           buildMovieList(),
-          buildPlaceholder("TV Shows"), // dummy
+          buildPlaceholder("Watchlist"), // dummy
           buildPlaceholder("Favorites"),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFE50914),
-        child: const Icon(Icons.add),
-        onPressed: () {},
       ),
     );
   }

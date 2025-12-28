@@ -6,98 +6,180 @@ class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() => AuthScreenState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String _errorMessage = '';
 
-  void _register() async {
+  bool isLogin = true;
+  bool isLoading = false;
+  bool isPasswordHidden = true;
+  String errorMessage = '';
+
+  Future<void> _submit() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+      if (isLogin) {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      }
 
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } catch (e) {
       setState(() {
-        _errorMessage = "Registration failed: ${e.toString()}";
+        errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
       });
     }
   }
 
-  void _login() async {
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Login failed: ${e.toString()}";
-      });
-    }
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: const Color(0xFFE50914)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Login Page'),
-        backgroundColor: const Color(0xFFE50914),
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: "Email"),
+      backgroundColor: Colors.black,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Card(
+            color: Colors.white,
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: "Password"),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _register,
-              child: Text('Register'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE50914),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.movie, size: 60, color: Color(0xFFE50914)),
+                  const SizedBox(height: 10),
+                  Text(
+                    isLogin ? "Welcome Back" : "Create Account",
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // EMAIL
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: _inputDecoration("Email", Icons.email),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // PASSWORD
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: isPasswordHidden,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      prefixIcon: const Icon(
+                        Icons.lock,
+                        color: Color(0xFFE50914),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isPasswordHidden
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordHidden = !isPasswordHidden;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // ERROR MESSAGE
+                  if (errorMessage.isNotEmpty)
+                    Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  const SizedBox(height: 10),
+
+                  // BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE50914),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              isLogin ? "Login" : "Register",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // SWITCH LOGIN DAN REGIST
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        isLogin = !isLogin;
+                        errorMessage = '';
+                      });
+                    },
+                    child: Text(
+                      isLogin
+                          ? "Belum punya akun? Register"
+                          : "Sudah punya akun? Login",
+                      style: const TextStyle(color: Color(0xFFE50914)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text('Login'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE50914),
-              ),
-            ),
-            SizedBox(height: 20),
-            if (_errorMessage.isNotEmpty)
-              Text(
-                _errorMessage,
-                style: TextStyle(
-                  color: _errorMessage.contains("successful")
-                      ? Colors.green
-                      : Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-          ],
+          ),
         ),
       ),
     );
