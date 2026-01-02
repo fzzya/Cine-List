@@ -6,7 +6,6 @@ import 'models/movie.dart';
 import 'services.dart/movie_services.dart';
 
 void main() async {
-  final MovieService _movieService = MovieService();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
