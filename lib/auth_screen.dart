@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/home.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pages/admin_pages.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -25,23 +27,61 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
+      UserCredential userCredential;
+
       if (isLogin) {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
       } else {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
+        userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            );
+
+        // SIMPAN USER BARU KE FIRESTORE
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'email': _emailController.text.trim(),
+              'role': 'user',
+              'createdAt': Timestamp.now(),
+            });
       }
 
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+      final uid = userCredential.user!.uid;
+
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+      final userDoc = await userRef.get();
+
+      // 🔥 JIKA DATA USER BELUM ADA
+      if (!userDoc.exists) {
+        await userRef.set({
+          'email': _emailController.text.trim(),
+          'role': 'user',
+          'createdAt': Timestamp.now(),
+        });
+      }
+
+      // 🔥 AMBIL ROLE DENGAN AMAN
+      final role = (await userRef.get()).data()!['role'];
+
+      // 🔥 REDIRECT SESUAI ROLE
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminPage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
     } catch (e) {
       setState(() {
         errorMessage = e.toString();

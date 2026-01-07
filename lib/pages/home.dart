@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/movie.dart';
-import '../services.dart/movie_services.dart';
+import '../services/movie_services.dart';
 import 'favorite_page.dart';
 import 'watchlist_page.dart';
 
@@ -15,7 +15,6 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final MovieService _movieService = MovieService();
-  // final FirestoreService firestoreService = FirestoreService();
 
   List<Movie> watchlist = [];
   List<Movie> favorites = [];
