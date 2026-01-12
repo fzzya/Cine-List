@@ -3,6 +3,9 @@ import '../models/movie.dart';
 import '../services/movie_services.dart';
 import 'favorite_page.dart';
 import 'watchlist_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cine_list/auth_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -23,6 +26,7 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    loadUserData();
   }
 
   @override
@@ -31,6 +35,35 @@ class _HomePageState extends State<HomePage>
     super.dispose();
   }
 
+  /// LOAD DATA WATCHLIST & FAVORITE DARI FIRESTORE
+  Future<void> loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final watchSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('watchlist')
+        .get();
+
+    final favSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .get();
+
+    setState(() {
+      watchlist = watchSnap.docs
+          .map((doc) => Movie.fromFirestore(doc.data()))
+          .toList();
+
+      favorites = favSnap.docs
+          .map((doc) => Movie.fromFirestore(doc.data()))
+          .toList();
+    });
+  }
+
+  /// LIST MOVIE DARI API
   Widget buildMovieList() {
     return FutureBuilder<List<Movie>>(
       future: _movieService.getPopularMovies(),
@@ -63,7 +96,6 @@ class _HomePageState extends State<HomePage>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Poster
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
@@ -75,7 +107,6 @@ class _HomePageState extends State<HomePage>
                       ),
                       const SizedBox(width: 12),
 
-                      // Info
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +118,6 @@ class _HomePageState extends State<HomePage>
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-
                             const SizedBox(height: 6),
                             Text(
                               movie.overview,
@@ -96,21 +126,16 @@ class _HomePageState extends State<HomePage>
                             ),
                             const SizedBox(height: 10),
 
-                            // BUTTONS
                             Row(
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.bookmark_border),
-                                  onPressed: () {
-                                    addToWatchlist(movie);
-                                  },
+                                  onPressed: () => addToWatchlist(movie),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.favorite_border),
                                   color: Colors.red,
-                                  onPressed: () {
-                                    addToFavorite(movie);
-                                  },
+                                  onPressed: () => addToFavorite(movie),
                                 ),
                               ],
                             ),
@@ -128,18 +153,57 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  void addToWatchlist(Movie movie) async {
+  /// TAMBAH KE WATCHLIST (FIRESTORE)
+  Future<void> addToWatchlist(Movie movie) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final ref = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('watchlist')
+        .doc(movie.id.toString());
+
+    await ref.set({
+      'id': movie.id,
+      'title': movie.title,
+      'overview': movie.overview,
+      'posterPath': movie.posterPath,
+      'releaseDate': movie.releaseDate,
+      'createdAt': Timestamp.now(),
+    });
+
     if (!watchlist.any((m) => m.id == movie.id)) {
       setState(() => watchlist.add(movie));
     }
   }
 
-  void addToFavorite(Movie movie) async {
+  /// TAMBAH KE FAVORITE (FIRESTORE)
+  Future<void> addToFavorite(Movie movie) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final ref = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .doc(movie.id.toString());
+
+    await ref.set({
+      'id': movie.id,
+      'title': movie.title,
+      'overview': movie.overview,
+      'posterPath': movie.posterPath,
+      'releaseDate': movie.releaseDate,
+      'createdAt': Timestamp.now(),
+    });
+
     if (!favorites.any((m) => m.id == movie.id)) {
       setState(() => favorites.add(movie));
     }
   }
 
+  /// DETAIL MOVIE
   void showMovieDetail(Movie movie) {
     showDialog(
       context: context,
@@ -197,13 +261,13 @@ class _HomePageState extends State<HomePage>
                       ElevatedButton.icon(
                         icon: const Icon(Icons.favorite),
                         label: const Text("Favorite"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
                         onPressed: () {
                           addToFavorite(movie);
                           Navigator.pop(context);
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
                       ),
                     ],
                   ),
@@ -216,20 +280,31 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget buildPlaceholder(String title) {
-    return Center(child: Text(title, style: const TextStyle(fontSize: 18)));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'CineList',
-          textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFFE50914),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+
+              if (!context.mounted) return;
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const AuthScreen()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

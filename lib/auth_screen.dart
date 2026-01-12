@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'pages/home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pages/home.dart';
 import 'pages/admin_pages.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -21,6 +21,28 @@ class _AuthScreenState extends State<AuthScreen> {
   String errorMessage = '';
 
   Future<void> _submit() async {
+    // VALIDASI INPUT
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        errorMessage = 'Email cannot be empty.';
+      });
+      return;
+    }
+
+    if (_passwordController.text.trim().isEmpty) {
+      setState(() {
+        errorMessage = 'Password cannot be empty.';
+      });
+      return;
+    }
+
+    if (_passwordController.text.trim().length < 6) {
+      setState(() {
+        errorMessage = 'Password must be at least 6 characters long.';
+      });
+      return;
+    }
+
     setState(() {
       isLoading = true;
       errorMessage = '';
@@ -29,6 +51,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       UserCredential userCredential;
 
+      // LOGIN / REGISTER
       if (isLogin) {
         userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
@@ -41,7 +64,7 @@ class _AuthScreenState extends State<AuthScreen> {
               password: _passwordController.text.trim(),
             );
 
-        // SIMPAN USER BARU KE FIRESTORE
+        // DEFAULT ROLE USER
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
@@ -53,12 +76,11 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       final uid = userCredential.user!.uid;
-
       final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
 
       final userDoc = await userRef.get();
 
-      // 🔥 JIKA DATA USER BELUM ADA
+      // JIKA DATA USER BELUM ADA
       if (!userDoc.exists) {
         await userRef.set({
           'email': _emailController.text.trim(),
@@ -67,10 +89,11 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
 
-      // 🔥 AMBIL ROLE DENGAN AMAN
-      final role = (await userRef.get()).data()!['role'];
+      final role = userDoc.data()?['role'] ?? 'user';
 
-      // 🔥 REDIRECT SESUAI ROLE
+      if (!mounted) return;
+
+      // REDIRECT SESUAI ROLE
       if (role == 'admin') {
         Navigator.pushReplacement(
           context,
@@ -84,7 +107,7 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        errorMessage = 'Authentication failed. Please try again.';
       });
     } finally {
       setState(() {
@@ -109,8 +132,6 @@ class _AuthScreenState extends State<AuthScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Card(
-            color: Colors.white,
-            elevation: 8,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -122,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const Icon(Icons.movie, size: 60, color: Color(0xFFE50914)),
                   const SizedBox(height: 10),
                   Text(
-                    isLogin ? "Welcome Back" : "Create Account",
+                    isLogin ? 'Welcome Back' : 'Create Account',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -133,8 +154,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   // EMAIL
                   TextField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _inputDecoration("Email", Icons.email),
+                    decoration: _inputDecoration('Email', Icons.email),
                   ),
                   const SizedBox(height: 15),
 
@@ -143,7 +163,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     controller: _passwordController,
                     obscureText: isPasswordHidden,
                     decoration: InputDecoration(
-                      labelText: "Password",
+                      labelText: 'Password',
                       prefixIcon: const Icon(
                         Icons.lock,
                         color: Color(0xFFE50914),
@@ -153,7 +173,6 @@ class _AuthScreenState extends State<AuthScreen> {
                           isPasswordHidden
                               ? Icons.visibility_off
                               : Icons.visibility,
-                          color: Colors.grey,
                         ),
                         onPressed: () {
                           setState(() {
@@ -166,7 +185,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 15),
+
+                  const SizedBox(height: 10),
 
                   // ERROR MESSAGE
                   if (errorMessage.isNotEmpty)
@@ -176,7 +196,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       textAlign: TextAlign.center,
                     ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 15),
 
                   // BUTTON
                   SizedBox(
@@ -186,22 +206,15 @@ class _AuthScreenState extends State<AuthScreen> {
                       onPressed: isLoading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE50914),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                       ),
                       child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              isLogin ? "Login" : "Register",
-                              style: const TextStyle(fontSize: 16),
-                            ),
+                          : Text(isLogin ? 'Login' : 'Register'),
                     ),
                   ),
 
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 10),
 
-                  // SWITCH LOGIN DAN REGIST
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -211,9 +224,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     },
                     child: Text(
                       isLogin
-                          ? "Belum punya akun? Register"
-                          : "Sudah punya akun? Login",
-                      style: const TextStyle(color: Color(0xFFE50914)),
+                          ? 'Don\'t have an account? Register'
+                          : 'Already have an account? Login',
                     ),
                   ),
                 ],
