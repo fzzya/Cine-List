@@ -3,7 +3,6 @@ class Movie {
   final String title;
   final String overview;
   final String posterPath;
-  final double rating;
   final String releaseDate;
 
   Movie({
@@ -11,18 +10,40 @@ class Movie {
     required this.title,
     required this.overview,
     required this.posterPath,
-    required this.rating,
     required this.releaseDate,
   });
 
+  // FROM API TMDB
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
       id: json['id'],
       title: json['title'],
       overview: json['overview'],
       posterPath: json['poster_path'] ?? '',
-      rating: (json['vote_average'] as num).toDouble(),
       releaseDate: json['release_date'] ?? '',
+    );
+  }
+
+  // TO FIRESTORE
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'title': title,
+      'overview': overview,
+      'posterPath': posterPath,
+      'releaseDate': releaseDate,
+      'createdAt': DateTime.now(),
+    };
+  }
+
+  // FROM FIRESTORE
+  factory Movie.fromFirestore(Map<String, dynamic> data) {
+    return Movie(
+      id: data['id'],
+      title: data['title'],
+      overview: data['overview'],
+      posterPath: data['posterPath'],
+      releaseDate: data['releaseDate'],
     );
   }
 
